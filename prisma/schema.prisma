@@ -1,0 +1,142 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id               String   @id @default(cuid())
+  nom              String
+  prenom           String
+  password         String
+  adresse          String
+  telephone        String
+  role             String   @default("coproprietaire")
+  syndicId         String?
+  syndic           User?    @relation("PropertyUsers", fields: [syndicId], references: [id], onDelete: SetNull)
+  coproprietaires  User[]   @relation("PropertyUsers")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  bureaux             Bureau[]       @relation("BureauUser")
+  syndicBureaux       Bureau[]       @relation("BureauSyndic")
+  charges             Charge[]       @relation("ChargeSyndic")
+  depenses            Depense[]      @relation("DepenseSyndic")
+  votes               Vote[]         @relation("VoteSyndic")
+  sentMessages        Message[]      @relation("SentMessages")
+  receivedMessages    Message[]      @relation("ReceivedMessages")
+  groupMessages       GroupMessage[] @relation("GroupMessageSender")
+  syndicGroupMessages GroupMessage[] @relation("GroupMessageSyndic")
+  voteResponses       VoteResponse[]
+}
+
+model Bureau {
+  id                String     @id @default(cuid())
+  numeroBureau      Int        @default(autoincrement())
+  nom               String
+  etage             Int?
+  titreFoncier      String?
+  quotePartPrivee   Float
+  quotePartCommunes Float?
+  userId            String?
+  user              User?      @relation("BureauUser", fields: [userId], references: [id], onDelete: Cascade)
+  syndicId          String
+  syndic            User       @relation("BureauSyndic", fields: [syndicId], references: [id], onDelete: Cascade)
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+  paiements         Paiement[]
+}
+
+model Charge {
+  id             String   @id @default(cuid())
+  libelle        String
+  description    String?
+  montantAnnuel  Float?
+  montantMensuel Float?
+  typeFixe       Boolean  @default(true)
+  imageUrl       String?
+  annee          Int
+  syndicId       String
+  syndic         User     @relation("ChargeSyndic", fields: [syndicId], references: [id], onDelete: Cascade)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Paiement {
+  id          String   @id @default(cuid())
+  mois        Int
+  annee       Int
+  montant     Float
+  montantReel Float?
+  statut      String   @default("impayé")
+  bureauId    String
+  bureau      Bureau   @relation(fields: [bureauId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([annee, bureauId, mois])
+}
+
+model Depense {
+  id         String   @id @default(cuid())
+  libelle    String
+  montant    Float
+  moisDepart Int
+  annee      Int
+  imageUrl   String?
+  syndicId   String
+  syndic     User     @relation("DepenseSyndic", fields: [syndicId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Message {
+  id         String   @id @default(cuid())
+  content    String
+  lu         Boolean  @default(false)
+  senderId   String
+  receiverId String
+  sender     User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model GroupMessage {
+  id          String   @id @default(cuid())
+  content     String
+  senderId    String
+  sender      User     @relation("GroupMessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  syndicId    String
+  syndic      User     @relation("GroupMessageSyndic", fields: [syndicId], references: [id], onDelete: Cascade)
+  isAnonymous Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Vote {
+  id          String         @id @default(cuid())
+  title       String
+  description String?
+  actif       Boolean        @default(true)
+  syndicId    String
+  syndic      User           @relation("VoteSyndic", fields: [syndicId], references: [id], onDelete: Cascade)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  responses   VoteResponse[]
+}
+
+model VoteResponse {
+  id        String   @id @default(cuid())
+  voteId    String
+  vote      Vote     @relation(fields: [voteId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  choix     String
+  createdAt DateTime @default(now())
+
+  @@unique([voteId, userId])
+}
